@@ -42,26 +42,31 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           set -e
-          # ۱. پاک کردن کامل پوشه اندروید خرابِ داخل زیپ
           rm -rf android
-          
-          # ۲. ذخیره کدهای دارت شما در یک پوشه موقت
           mkdir -p /tmp/my_code
           cp -r lib assets pubspec.yaml /tmp/my_code/ 2>/dev/null || true
-          
-          # ۳. ساخت پروژه کاملاً جدید و سالم
           flutter create --org com.example --project-name not_app --platforms=android .
-          
-          # ۴. برگرداندن کدهای دارت خودتان به پروژه جدید
           cp -rf /tmp/my_code/* .
 
       - name: Install dependencies
         working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
+      # 🌟 این مرحله جدید است: آپدیت کردن SDK به نسخه ۳۴
+      - name: Update Android SDK to 34
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          # پیدا کردن فایل build.gradle اندروید
+          GRADLE_FILE=$(find android -name "build.gradle" | head -n 1)
+          
+          # جایگزینی هر نسخه‌ای (مثل 33 یا flutter.compileSdkVersion) با 34
+          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' "$GRADLE_FILE"
+          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' "$GRADLE_FILE"
+          sed -i 's/compileSdk .*/compileSdk 34/g' "$GRADLE_FILE"
+          sed -i 's/targetSdk .*/targetSdk 34/g' "$GRADLE_FILE"
+
       - name: Build release APK
         working-directory: ${{ env.PROJECT_DIR }}
-        # دستور بایپس کردن چک نسخه گریدل
         run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Upload APK
