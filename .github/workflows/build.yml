@@ -16,19 +16,14 @@ jobs:
       - name: Extract Zip File
         run: |
           set -e
-          # پیدا کردن هر فایل زیپی در ریشه پروژه
           ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then 
-            echo "هیچ فایل زیپی پیدا نشد!"; ls -la; exit 1
-          fi
+          if [ -z "$ZIP_FILE" ]; then echo "فایل زیپ پیدا نشد"; exit 1; fi
           
-          echo "در حال باز کردن فایل: $ZIP_FILE"
           mkdir -p extracted
           unzip -q -o "$ZIP_FILE" -d extracted
           
           PUBSPEC=$(find extracted -name pubspec.yaml -not -path "*/.*" | head -n 1)
-          if [ -z "$PUBSPEC" ]; then echo "pubspec.yaml داخل zip نیست"; exit 1; fi
-          
+          if [ -z "$PUBSPEC" ]; then echo "pubspec.yaml پیدا نشد"; exit 1; fi
           echo "PROJECT_DIR=$(dirname "$PUBSPEC")" >> "$GITHUB_ENV"
 
       - name: Setup Java
@@ -43,17 +38,21 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Complete project scaffold (fix missing files)
+      - name: Rebuild Android Folder (The Fix)
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           set -e
+          # ۱. نگه داشتن فایل‌های خودمان (کدهای دارت)
           rm -rf /tmp/src && mkdir /tmp/src
           cp -r . /tmp/src/
-          # حذف پوشه اندروید قدیمی برای جلوگیری از تداخل نسخه‌ها
+          
+          # ۲. پاک کردن کامل پوشه اندروید خرابِ ساخته شده توسط هوش مصنوعی
           rm -rf android
-          # ساخت پوشه اندروید استاندارد و جدید
+          
+          # ۳. ساخت یک پوشه اندروید کاملاً نو و استاندارد
           flutter create --org com.example --project-name not_app --platforms=android .
-          # بازگرداندن کدهای اصلی شما
+          
+          # ۴. برگرداندن فایل‌های خودمان (مثل lib و assets و pubspec)
           cp -rf /tmp/src/. .
 
       - name: Install dependencies
@@ -62,8 +61,7 @@ jobs:
 
       - name: Build release APK
         working-directory: ${{ env.PROJECT_DIR }}
-        # دستور معجزه‌آسا برای نادیده گرفتن خطای نسخه گریدل
-        run: flutter build apk --release --android-skip-build-dependency-validation
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
