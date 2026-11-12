@@ -1,49 +1,73 @@
-name: Build APK from Zip
-on: [push, workflow_dispatch]
-
+# مسیر فایل در ریپو:  .github/workflows/build-apk.yml
+# کار این workflow:
+#   ۱) not_app.zip را از ریشهٔ ریپو استخراج می‌کند
+#   ۲) فایل‌های ناقص (gradlew و ios) را با flutter create می‌سازد و فایل‌های خودمان را برمی‌گرداند
+#   ۳) APK می‌سازد و به‌صورت Artifact آپلود می‌کند
+ 
+name: Build APK
+ 
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:   # اجرای دستی از تب Actions
+ 
 jobs:
   build:
     runs-on: ubuntu-latest
+ 
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Unzip Project File
+ 
+      - name: Extract not_app.zip
         run: |
-          # پیدا کردن فایل زیپ و خارج کردن آن
-          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then
-            echo "Error: No zip file found!"
-            exit 1
+          set -e
+          if [ ! -f not_app.zip ]; then
+            echo "not_app.zip در ریشهٔ ریپو پیدا نشد"; ls -la; exit 1
           fi
-          unzip -q "$ZIP_FILE" -d ./app_source
-          
-          # اگر فایل‌ها داخل یک پوشه تو در تو بودند، آن‌ها را به ریشه منتقل می‌کنیم
-          if [ -f "./app_source/not_app/pubspec.yaml" ]; then
-            mv ./app_source/not_app/* .
-          else
-            mv ./app_source/* .
-          fi
-
+          mkdir -p extracted
+          unzip -q -o not_app.zip -d extracted
+          PUBSPEC=$(find extracted -name pubspec.yaml -not -path "*/.*" | head -n 1)
+          if [ -z "$PUBSPEC" ]; then echo "pubspec.yaml داخل zip نیست"; exit 1; fi
+          echo "PROJECT_DIR=$(dirname "$PUBSPEC")" >> "$GITHUB_ENV"
+ 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: temurin
           java-version: '17'
-
+ 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
-
-      - name: Get Dependencies & Build APK
+          channel: stable
+          cache: true
+ 
+      - name: Complete project scaffold (gradlew, ios, ...)
+        working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          flutter pub get
-          flutter build apk --release
-
+          set -e
+          # نسخهٔ پشتیبان از فایل‌های خودمان
+          rm -rf /tmp/src && mkdir /tmp/src
+          cp -r . /tmp/src/
+          flutter create --org com.example --project-name not_app --platforms=android .
+          # بازگرداندن فایل‌های خودمان روی خروجی flutter create
+          cp -rf /tmp/src/. .
+ 
+      - name: Install dependencies
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: flutter pub get
+ 
+      - name: Run tests
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: flutter test
+ 
+      - name: Build release APK
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: flutter build apk --release
+ 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: not-app-apk
+          path: ${{ env.PROJECT_DIR }}/build/app/outputs/flutter-apk/app-release.apk
