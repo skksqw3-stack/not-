@@ -48,25 +48,27 @@ jobs:
           flutter create --org com.example --project-name not_app --platforms=android .
           cp -rf /tmp/my_code/* .
 
+      # 🌟 حذف کتابخانه دردسرساز share_plus
+      - name: Remove share_plus dependency
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: |
+          set -e
+          # حذف خط share_plus از فایل pubspec.yaml
+          sed -i '/share_plus:/d' pubspec.yaml
+          
+          # پیدا کردن همه فایل‌های دارت و کامنت کردن خطوط مربوط به share_plus
+          find lib -name "*.dart" | while read -r file; do
+            sed -i 's/^\(.*share_plus.*\)$/\/\/ \1/g' "$file"
+          done
+
       - name: Install dependencies
         working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
-      # 🌟 اصلاح مرحله آپدیت SDK به روش مطمئن (پیدا کردن همه فایل‌های build.gradle)
-      - name: Update Android SDK to 34
-        working-directory: ${{ env.PROJECT_DIR }}
-        run: |
-          # پیدا کردن همه فایل‌های build.gradle و اصلاح آن‌ها
-          find . -name "build.gradle" | while read -r file; do
-            sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' "$file"
-            sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' "$file"
-            sed -i 's/compileSdk .*/compileSdk 34/g' "$file"
-            sed -i 's/targetSdk .*/targetSdk 34/g' "$file"
-          done
-
       - name: Build release APK
         working-directory: ${{ env.PROJECT_DIR }}
-        run: flutter build apk --release --android-skip-build-dependency-validation
+        # حذف دستور skip، چون دیگر نیازی نیست
+        run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
