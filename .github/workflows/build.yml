@@ -1,0 +1,49 @@
+name: Build APK from Zip
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Unzip Project File
+        run: |
+          # پیدا کردن فایل زیپ و خارج کردن آن
+          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+          if [ -z "$ZIP_FILE" ]; then
+            echo "Error: No zip file found!"
+            exit 1
+          fi
+          unzip -q "$ZIP_FILE" -d ./app_source
+          
+          # اگر فایل‌ها داخل یک پوشه تو در تو بودند، آن‌ها را به ریشه منتقل می‌کنیم
+          if [ -f "./app_source/not_app/pubspec.yaml" ]; then
+            mv ./app_source/not_app/* .
+          else
+            mv ./app_source/* .
+          fi
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Get Dependencies & Build APK
+        run: |
+          flutter pub get
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
