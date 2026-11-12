@@ -13,16 +13,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract Zip File
+      - name: Find and Extract Latest Zip
         run: |
           set -e
-          # پیدا کردن فایل زیپ جدید (not_app_fixed.zip)
-          ZIP_FILE="not_app_fixed.zip"
-          if [ ! -f "$ZIP_FILE" ]; then 
-            echo "فایل not_app_fixed.zip پیدا نشد"; ls -la; exit 1
+          # پیدا کردن آخرین فایل زیپ (بر اساس تاریخ تغییر)
+          ZIP_FILE=$(ls -t *.zip | head -n 1)
+          
+          if [ -z "$ZIP_FILE" ]; then 
+            echo "هیچ فایل زیپی پیدا نشد!"; ls -la; exit 1
           fi
           
-          echo "در حال باز کردن فایل: $ZIP_FILE"
+          echo "✅ در حال باز کردن فایل: $ZIP_FILE"
           mkdir -p extracted
           unzip -q -o "$ZIP_FILE" -d extracted
           
