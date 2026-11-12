@@ -48,17 +48,20 @@ jobs:
           flutter create --org com.example --project-name not_app --platforms=android .
           cp -rf /tmp/my_code/* .
 
-      # 🌟 حذف کتابخانه دردسرساز share_plus
-      - name: Remove share_plus dependency
+      # 🌟 اصلاح فایل‌های دارت و حذف پکیج share_plus
+      - name: Fix Share errors and Remove share_plus
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           set -e
-          # حذف خط share_plus از فایل pubspec.yaml
+          # حذف share_plus از pubspec.yaml
           sed -i '/share_plus:/d' pubspec.yaml
           
-          # پیدا کردن همه فایل‌های دارت و کامنت کردن خطوط مربوط به share_plus
+          # کامنت کردن ایمپورت‌ها و دستور Share در فایل‌های دارت
           find lib -name "*.dart" | while read -r file; do
-            sed -i 's/^\(.*share_plus.*\)$/\/\/ \1/g' "$file"
+            # کامنت کردن خط ایمپورت
+            sed -i "s|^\(.*import 'package:share_plus.*\)$|\/\/ \1|g" "$file"
+            # کامنت کردن دستور Share.share
+            sed -i "s|^\(.*Share\.share.*\)$|\/\/ \1|g" "$file"
           done
 
       - name: Install dependencies
@@ -67,7 +70,6 @@ jobs:
 
       - name: Build release APK
         working-directory: ${{ env.PROJECT_DIR }}
-        # حذف دستور skip، چون دیگر نیازی نیست
         run: flutter build apk --release
 
       - name: Upload APK
