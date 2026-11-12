@@ -16,9 +16,13 @@ jobs:
       - name: Extract Zip File
         run: |
           set -e
-          ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
-          if [ -z "$ZIP_FILE" ]; then echo "فایل زیپ پیدا نشد"; exit 1; fi
+          # پیدا کردن فایل زیپ جدید (not_app_fixed.zip)
+          ZIP_FILE="not_app_fixed.zip"
+          if [ ! -f "$ZIP_FILE" ]; then 
+            echo "فایل not_app_fixed.zip پیدا نشد"; ls -la; exit 1
+          fi
           
+          echo "در حال باز کردن فایل: $ZIP_FILE"
           mkdir -p extracted
           unzip -q -o "$ZIP_FILE" -d extracted
           
@@ -48,33 +52,18 @@ jobs:
           flutter create --org com.example --project-name not_app --platforms=android .
           cp -rf /tmp/my_code/* .
 
-      # 🌟 حذف هوشمندانه share_plus و اصلاح خودکار کدهای دارت
-      - name: Fix Share errors
+      # ارتقای SDK به 34 (برای رفع مشکل Gradle)
+      - name: Force Android SDK to 34
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           set -e
-          # ۱. حذف پکیج از pubspec.yaml
-          sed -i '/share_plus:/d' pubspec.yaml
-          
-          # ۲. پردازش فایل‌های دارت
-          find lib -name "*.dart" | while read -r file; do
-            # حذف خط ایمپورت
-            sed -i "/import 'package:share_plus/d" "$file"
-            
-            # پیدا کردن خطی که Share.share دارد
-            if grep -q "Share.share" "$file"; then
-              # پیدا کردن شماره خطی که Share.share در آن است
-              LINE_NUM=$(grep -n "Share.share" "$file" | cut -d: -f1 | head -n 1)
-              
-              if [ -n "$LINE_NUM" ]; then
-                # چون دستور Share در یک خط بوده، ما ۲ خط بالا و ۲ خط پایین آن را حذف می‌کنیم
-                # تا کل ویجت IconButton سالم پاک شود
-                START=$((LINE_NUM - 3))
-                END=$((LINE_NUM + 3))
-                sed -i "${START},${END}d" "$file"
-              fi
-            fi
-          done
+          FILE="android/app/build.gradle"
+          if [ -f "$FILE" ]; then
+            sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' "$FILE"
+            sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' "$FILE"
+            sed -i 's/compileSdk .*/compileSdk 34/g' "$FILE"
+            sed -i 's/targetSdk .*/targetSdk 34/g' "$FILE"
+          fi
 
       - name: Install dependencies
         working-directory: ${{ env.PROJECT_DIR }}
@@ -82,7 +71,7 @@ jobs:
 
       - name: Build release APK
         working-directory: ${{ env.PROJECT_DIR }}
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
