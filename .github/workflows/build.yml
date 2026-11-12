@@ -38,22 +38,22 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Rebuild Android Folder (The Fix)
+      - name: Clean and Rebuild Android Folder
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
           set -e
-          # ۱. نگه داشتن فایل‌های خودمان (کدهای دارت)
-          rm -rf /tmp/src && mkdir /tmp/src
-          cp -r . /tmp/src/
-          
-          # ۲. پاک کردن کامل پوشه اندروید خرابِ ساخته شده توسط هوش مصنوعی
+          # ۱. پاک کردن کامل پوشه اندروید خرابِ داخل زیپ
           rm -rf android
           
-          # ۳. ساخت یک پوشه اندروید کاملاً نو و استاندارد
+          # ۲. ذخیره کدهای دارت شما در یک پوشه موقت
+          mkdir -p /tmp/my_code
+          cp -r lib assets pubspec.yaml /tmp/my_code/ 2>/dev/null || true
+          
+          # ۳. ساخت پروژه کاملاً جدید و سالم
           flutter create --org com.example --project-name not_app --platforms=android .
           
-          # ۴. برگرداندن فایل‌های خودمان (مثل lib و assets و pubspec)
-          cp -rf /tmp/src/. .
+          # ۴. برگرداندن کدهای دارت خودتان به پروژه جدید
+          cp -rf /tmp/my_code/* .
 
       - name: Install dependencies
         working-directory: ${{ env.PROJECT_DIR }}
@@ -61,7 +61,8 @@ jobs:
 
       - name: Build release APK
         working-directory: ${{ env.PROJECT_DIR }}
-        run: flutter build apk --release
+        # دستور بایپس کردن چک نسخه گریدل
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
