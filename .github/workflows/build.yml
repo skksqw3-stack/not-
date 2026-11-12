@@ -13,14 +13,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Find and Extract Latest Zip
+      - name: Extract Zip File
         run: |
           set -e
-          # پیدا کردن آخرین فایل زیپ (بر اساس تاریخ تغییر)
-          ZIP_FILE=$(ls -t *.zip | head -n 1)
+          # 🌟 نام فایل زیپ جدید شما
+          ZIP_FILE="not_app_podcasts_white_screen_fixed.zip"
           
-          if [ -z "$ZIP_FILE" ]; then 
-            echo "هیچ فایل زیپی پیدا نشد!"; ls -la; exit 1
+          if [ ! -f "$ZIP_FILE" ]; then 
+            echo "فایل پیدا نشد: $ZIP_FILE"; ls -la; exit 1
           fi
           
           echo "✅ در حال باز کردن فایل: $ZIP_FILE"
