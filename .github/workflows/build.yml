@@ -52,18 +52,17 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: flutter pub get
 
-      # 🌟 این مرحله جدید است: آپدیت کردن SDK به نسخه ۳۴
+      # 🌟 اصلاح مرحله آپدیت SDK به روش مطمئن (پیدا کردن همه فایل‌های build.gradle)
       - name: Update Android SDK to 34
         working-directory: ${{ env.PROJECT_DIR }}
         run: |
-          # پیدا کردن فایل build.gradle اندروید
-          GRADLE_FILE=$(find android -name "build.gradle" | head -n 1)
-          
-          # جایگزینی هر نسخه‌ای (مثل 33 یا flutter.compileSdkVersion) با 34
-          sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' "$GRADLE_FILE"
-          sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' "$GRADLE_FILE"
-          sed -i 's/compileSdk .*/compileSdk 34/g' "$GRADLE_FILE"
-          sed -i 's/targetSdk .*/targetSdk 34/g' "$GRADLE_FILE"
+          # پیدا کردن همه فایل‌های build.gradle و اصلاح آن‌ها
+          find . -name "build.gradle" | while read -r file; do
+            sed -i 's/compileSdkVersion .*/compileSdkVersion 34/g' "$file"
+            sed -i 's/targetSdkVersion .*/targetSdkVersion 34/g' "$file"
+            sed -i 's/compileSdk .*/compileSdk 34/g' "$file"
+            sed -i 's/targetSdk .*/targetSdk 34/g' "$file"
+          done
 
       - name: Build release APK
         working-directory: ${{ env.PROJECT_DIR }}
